@@ -1,28 +1,23 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"database/sql"
 	"encoding/binary"
-	//"encoding/json"
+	"encoding/pem"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"io/ioutil"
 	"log"
-	//"math/big"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
-	//"strconv"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"crypto/x509"
-	//"encoding/base64"
-	"encoding/pem"
-	//"time"
-	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type Server struct {
