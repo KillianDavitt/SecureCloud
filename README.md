@@ -8,5 +8,5 @@ The cloud server must be an instance of 'ClassCloud'
 
 # Application Architecture
 
-![architecture diagram](https://www.github.com/KillianDavitt/SecureCloud/tree/master/doc/architecture.jpg)
+![architecture diagram](https://raw.githubusercontent.com/KillianDavitt/SecureCloud/master/doc/architecture.jpg)
 
