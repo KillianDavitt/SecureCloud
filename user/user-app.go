@@ -143,7 +143,6 @@ func (s *Server) put(filename string) {
 func (s *Server) rm(filename string) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
-
 	fw, err := w.CreateFormField("id")
 	if err != nil {
 		log.Fatal(err)
@@ -400,8 +399,8 @@ func (s *Server) query(data []byte) {
 func (s *Server) serverInit(ip string, priv rsa.PrivateKey, pub rsa.PublicKey, name string) {
 	conn, err := net.Dial("tcp", ip+":2222")
 	if err != nil {
-		// handle error
-		fmt.Print(err)
+		fmt.Println("\nApplication was unable to connect to the key server.\nPlease check the status of the key server or inform your key server manager of this error.\nAnotherpossible issue may be closed ports on the key servers connection.")
+		log.Fatal(err)
 	}
 	s.conn = conn
 
@@ -473,24 +472,19 @@ func findServer() string {
 	return "127.0.0.1"
 }
 
-/*func register(ip string, key rsa.PublicKey, ser *Server) bool {
-	strE := strconv.Itoa(key.E)
-	fmt.Fprintf(conn, strE+"\n")
-	fmt.Fprintf(conn, key.N.String()+"\n\n")
-	status, _ := bufio.NewReader(conn).ReadString('\n')
-	fmt.Println(status)
-	ser.conn = conn
-
-	// Get servers public key store in server
-
-	return true
-}
-*/
 func main() {
+	f, err := os.OpenFile("userapp.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
+
 	// First task, find a servera
-	fmt.Println("Attempting to locate secure server...")
+	fmt.Println("Loading key server address...")
 	ip := findServer()
-	fmt.Println("Server found...")
+	fmt.Println("Address found...")
 
 	var ser Server
 	server := &ser
@@ -575,7 +569,7 @@ func main() {
 	}
 
 	name := ""
-	fmt.Println("Pick a username: ")
+	fmt.Println("\nPick a username: ")
 	fmt.Scanf("%s", &name)
 
 	// At this point we have an rsa key
