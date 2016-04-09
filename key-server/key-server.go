@@ -1,8 +1,7 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
+	"../crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -44,13 +43,13 @@ func (s *Server) put_key(conn net.Conn, c Client) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	key = decrypt(key, c.aes_key)
+	key = crypto.Decrypt(key, c.aes_key)
 	id := make([]byte, 10)
 	_, err = io.ReadFull(conn, id)
 	if err != nil {
 		log.Fatal(err)
 	}
-	id = decrypt(id, c.aes_key)
+	id = crypto.Decrypt(id, c.aes_key)
 	fmt.Println(string(id))
 	s.keys[string(id)] = key
 	fmt.Println(s.keys[string(id)])
@@ -62,7 +61,7 @@ func (s *Server) get_key(conn net.Conn, c Client) []byte {
 	if err != nil {
 		log.Fatal(err)
 	}
-	id = decrypt(id, c.aes_key)
+	id = crypto.Decrypt(id, c.aes_key)
 	return s.keys[string(id)]
 }
 
@@ -314,7 +313,8 @@ func list(s *Server) string {
 	//reader := io.Reader("hi")
 	resp, err := http.PostForm("http://127.0.0.1:8000/list_files", v)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Print("There was an error connecting to the server, please ensure the cloud server is turned on")
+		log.Fatal(err)
 	}
 
 	body := make([]byte, resp.ContentLength)
@@ -331,7 +331,7 @@ func handle_commands(conn net.Conn, client Client, s *Server) {
 		data := receive(conn)
 		fmt.Println("Received command, about to decrypt")
 		// Have data, now decrypt with aes
-		plain := string(decrypt(data, client.aes_key))
+		plain := string(crypto.Decrypt(data, client.aes_key))
 		fmt.Println("Got a plain: ")
 		fmt.Println(plain)
 		if plain == "ls" {
@@ -362,22 +362,6 @@ func handle_commands(conn net.Conn, client Client, s *Server) {
 	}
 }
 
-func decrypt(data []byte, key []byte) []byte {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("\nThe length of the data is: %d This should have the iv at the end", len(data))
-	iv := data[len(data)-16:]
-
-	ciphertext := data[:len(data)-16]
-	cfb := cipher.NewCFBDecrypter(block, iv)
-	plaintext := make([]byte, len(ciphertext))
-	cfb.XORKeyStream(plaintext, ciphertext)
-	return plaintext
-}
-
 func acceptSessions(server *Server, clients map[string]Client) {
 	ln, err := net.Listen("tcp", ":2222")
 	if err != nil {
@@ -404,6 +388,6 @@ func receive(c net.Conn) []byte {
 	fmt.Printf("\nGot a size: %d", size)
 	data := make([]byte, size)
 	_, err = io.ReadFull(c, data)
-
+	fmt.Println("Got data")
 	return data
 }

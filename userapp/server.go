@@ -1,10 +1,8 @@
 package main
 
 import (
-	"../crypto/crypto"
+	"../crypto"
 	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -306,17 +304,18 @@ func (s *Server) ls() {
 }
 
 func (s *Server) decrypt_message(data []byte) []byte {
-	return decrypt(data, s.key)
+	return crypto.Decrypt(data, s.aes_key)
 }
 
 func (s *Server) encrypt_message(data []byte) []byte {
-	return encrypt(data, s.key)
+	return crypto.Encrypt(data, s.aes_key)
 }
 
 func (s *Server) query(data []byte) {
 	ciphertext := s.encrypt_message(data)
-
+	fmt.Println(ciphertext)
 	size := len(ciphertext)
+	fmt.Println(size)
 	size_bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(size_bytes, uint64(size))
 	_, err := s.conn.Write(size_bytes)
