@@ -2,6 +2,7 @@ package main
 
 import (
 	"../crypto"
+	"../network"
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
@@ -30,21 +31,10 @@ type Server struct {
 
 func (s *Server) get_key(id string) []byte {
 	s.query([]byte("CK"))
-	size_bytes := make([]uint8, 8)
 	s.query([]byte(id))
-	n, err := io.ReadFull(s.conn, size_bytes)
-	size := binary.LittleEndian.Uint64(size_bytes)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if n != 8 {
-		log.Fatal("Size not equal to 1")
-	}
-	response := make([]uint8, size)
-	_, err = io.ReadFull(s.conn, response)
-	if err != nil {
-		log.Fatal(err)
-	}
+	encrypted_response := network.Receive(s.conn)
+	response := crypto.Decrypt(encrypted_response, s.aes_key)
+	fmt.Printf("\nId we got is: ", response)
 	return response
 }
 
@@ -83,7 +73,7 @@ func (s *Server) put(filename string) {
 		log.Fatal(err)
 	}
 
-	enc := encrypt_with_key(bytes, key)
+	enc := crypto.Encrypt(bytes, key)
 	fw.Write(enc)
 	//if _, err = io.Copy(fw, f); err != nil {
 	//	log.Fatal(err)
@@ -253,7 +243,7 @@ func (s *Server) get(filename string) {
 
 	key := s.get_key(s.current_ls[filename])
 
-	fmt.Print(string(decrypt_with_key(body, key)))
+	fmt.Print(string(crypto.Decrypt(body, key)))
 
 	fmt.Println("Writing to file")
 	f.Write(body)
@@ -261,21 +251,8 @@ func (s *Server) get(filename string) {
 
 func (s *Server) ls() {
 	s.query([]byte("ls"))
-	size_bytes := make([]uint8, 8)
-	n, err := io.ReadFull(s.conn, size_bytes)
-	size := binary.LittleEndian.Uint64(size_bytes)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	if n != 8 {
-		log.Fatal("Size not equal to 1")
-	}
-	response := make([]uint8, size)
-	_, err = io.ReadFull(s.conn, response)
-	if err != nil {
-		log.Fatal(err)
-	}
+	encrypted_response := network.Receive(s.conn)
+	response := crypto.Decrypt(encrypted_response, s.aes_key)
 
 	response_string := string(response)
 	files_list := make(map[string]string)
@@ -313,21 +290,7 @@ func (s *Server) encrypt_message(data []byte) []byte {
 
 func (s *Server) query(data []byte) {
 	ciphertext := s.encrypt_message(data)
-	fmt.Println(ciphertext)
-	size := len(ciphertext)
-	fmt.Println(size)
-	size_bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(size_bytes, uint64(size))
-	_, err := s.conn.Write(size_bytes)
-	if err != nil {
-		fmt.Println("Error in query")
-		log.Fatal(err)
-	}
-
-	_, err = s.conn.Write(ciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
+	network.Send(s.conn, ciphertext)
 }
 
 func (s *Server) serverInit(ip string, priv rsa.PrivateKey, pub rsa.PublicKey, name string) {
