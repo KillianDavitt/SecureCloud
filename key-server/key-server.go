@@ -327,7 +327,7 @@ func handle_commands(conn net.Conn, client Client, s *Server) {
 	// Listen for "ls" or "put" or anything like that
 	fmt.Println("Handling commands")
 	for {
-		data := make([]byte, 2)
+		data := make([]byte, 64)
 		_, err := io.ReadFull(conn, data)
 		if err != nil {
 			log.Fatal(err)
@@ -370,7 +370,8 @@ func decrypt(data []byte, key []byte) []byte {
 		log.Fatal(err)
 	}
 
-	var iv = []byte{34, 35, 35, 57, 68, 4, 35, 36, 7, 8, 35, 23, 35, 86, 35, 23}
+	fmt.Printf("\nThe length of the data is: %d This should have the iv at the end", len(data))
+	iv := data[len(data)-32:]
 
 	ciphertext := data
 	cfb := cipher.NewCFBDecrypter(block, iv)
