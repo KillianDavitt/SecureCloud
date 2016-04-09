@@ -1,6 +1,7 @@
 package main
 
 import (
+	"../crypto"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -58,6 +59,8 @@ func findServer() string {
 }
 
 func main() {
+	crypto.test()
+
 	f, err := os.OpenFile("userapp.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)

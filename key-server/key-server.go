@@ -327,11 +327,9 @@ func handle_commands(conn net.Conn, client Client, s *Server) {
 	// Listen for "ls" or "put" or anything like that
 	fmt.Println("Handling commands")
 	for {
-		data := make([]byte, 64)
-		_, err := io.ReadFull(conn, data)
-		if err != nil {
-			log.Fatal(err)
-		}
+		fmt.Println("About to recv command")
+		data := receive(conn)
+		fmt.Println("Received command, about to decrypt")
 		// Have data, now decrypt with aes
 		plain := string(decrypt(data, client.aes_key))
 		fmt.Println("Got a plain: ")
@@ -371,9 +369,9 @@ func decrypt(data []byte, key []byte) []byte {
 	}
 
 	fmt.Printf("\nThe length of the data is: %d This should have the iv at the end", len(data))
-	iv := data[len(data)-32:]
+	iv := data[len(data)-16:]
 
-	ciphertext := data
+	ciphertext := data[:len(data)-16]
 	cfb := cipher.NewCFBDecrypter(block, iv)
 	plaintext := make([]byte, len(ciphertext))
 	cfb.XORKeyStream(plaintext, ciphertext)
@@ -393,4 +391,19 @@ func acceptSessions(server *Server, clients map[string]Client) {
 		go session(server, conn, clients)
 		fmt.Print("Going around")
 	}
+}
+
+func receive(c net.Conn) []byte {
+	size_bytes := make([]byte, 8)
+	_, err := io.ReadFull(c, size_bytes)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	size := binary.LittleEndian.Uint64(size_bytes)
+	fmt.Printf("\nGot a size: %d", size)
+	data := make([]byte, size)
+	_, err = io.ReadFull(c, data)
+
+	return data
 }

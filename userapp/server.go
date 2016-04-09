@@ -1,6 +1,7 @@
 package main
 
 import (
+	"../crypto/crypto"
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
@@ -305,43 +306,26 @@ func (s *Server) ls() {
 }
 
 func (s *Server) decrypt_message(data []byte) []byte {
-	block, err := aes.NewCipher(s.aes_key)
-	if err != nil {
-		fmt.Println("There was an error during decryption. Program will now terminate")
-		log.Fatal(err)
-	}
-
-	// Extract the iv from the end of ciphertext
-	iv := data[len(data)-32:]
-
-	cfb := cipher.NewCFBDecrypter(block, iv)
-	cfb.XORKeyStream(data[:len(data)-32], data)
-
-	return data
+	return decrypt(data, s.key)
 }
 
 func (s *Server) encrypt_message(data []byte) []byte {
-	block, err := aes.NewCipher(s.aes_key)
-
-	if err != nil {
-		panic(err)
-	}
-
-	var iv []byte
-	iv = make([]byte, 16)
-	_, err = rand.Read(iv)
-
-	cfb := cipher.NewCFBEncrypter(block, iv)
-	ciphertext := make([]byte, len(data))
-	cfb.XORKeyStream(ciphertext, data)
-
-	// Append iv to the ciphertext
-	return append(ciphertext, iv...)
+	return encrypt(data, s.key)
 }
 
 func (s *Server) query(data []byte) {
 	ciphertext := s.encrypt_message(data)
-	_, err := s.conn.Write(ciphertext)
+
+	size := len(ciphertext)
+	size_bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(size_bytes, uint64(size))
+	_, err := s.conn.Write(size_bytes)
+	if err != nil {
+		fmt.Println("Error in query")
+		log.Fatal(err)
+	}
+
+	_, err = s.conn.Write(ciphertext)
 	if err != nil {
 		log.Fatal(err)
 	}
