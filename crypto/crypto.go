@@ -1,39 +1,47 @@
 package crypto
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"fmt"
+	"log"
 )
 
-func decrypt([]byte data, []byte key) []byte {
-    block, err := aes.NewCipher(s.aes_key)
+const BLOCK_SIZE int = 16
+
+func Decrypt(data []byte, key []byte) []byte {
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		fmt.Println("There was an error during decryption. Program will now terminate")
 		log.Fatal(err)
 	}
 
 	// Extract the iv from the end of ciphertext
-	iv := data[len(data)-32:]
+	iv := data[len(data)-BLOCK_SIZE:]
+	ciphertext := data[:len(data)-BLOCK_SIZE]
+
+	plaintext := make([]byte, len(ciphertext))
 
 	cfb := cipher.NewCFBDecrypter(block, iv)
-	cfb.XORKeyStream(data[:len(data)-32], data)
-
-	return data
+	cfb.XORKeyStream(plaintext, ciphertext)
+	return plaintext
 }
 
-func encrypt([]byte data, []byte key) []byte {
-    block, err := aes.NewCipher(s.aes_key)
-
+func Encrypt(plaintext []byte, key []byte) []byte {
+	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err)
+		fmt.Println("There was an error during decryption, the program will now terminate")
+		log.Fatal(err)
 	}
 
 	var iv []byte
-	iv = make([]byte, 16)
+	iv = make([]byte, BLOCK_SIZE)
 	_, err = rand.Read(iv)
 
 	cfb := cipher.NewCFBEncrypter(block, iv)
-	ciphertext := make([]byte, len(data))
-	cfb.XORKeyStream(ciphertext, data)
+	ciphertext := make([]byte, len(plaintext))
+	cfb.XORKeyStream(ciphertext, plaintext)
 
 	// Append iv to the ciphertext
 	return append(ciphertext, iv...)

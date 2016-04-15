@@ -1,8 +1,8 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
+	"../crypto"
+	"../network"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -39,30 +39,22 @@ type Client struct {
 }
 
 func (s *Server) put_key(conn net.Conn, c Client) {
-	key := make([]byte, 32)
-	_, err := io.ReadFull(conn, key)
-	if err != nil {
-		log.Fatal(err)
-	}
-	key = decrypt(key, c.aes_key)
+	encrypted_key := network.Receive(conn)
+	key := crypto.Decrypt(encrypted_key, c.aes_key)
 	id := make([]byte, 10)
-	_, err = io.ReadFull(conn, id)
+	_, err := io.ReadFull(conn, id)
 	if err != nil {
 		log.Fatal(err)
 	}
-	id = decrypt(id, c.aes_key)
+	id = crypto.Decrypt(id, c.aes_key)
 	fmt.Println(string(id))
 	s.keys[string(id)] = key
 	fmt.Println(s.keys[string(id)])
 }
 
 func (s *Server) get_key(conn net.Conn, c Client) []byte {
-	id := make([]byte, 10)
-	_, err := io.ReadFull(conn, id)
-	if err != nil {
-		log.Fatal(err)
-	}
-	id = decrypt(id, c.aes_key)
+	encrypted_id := network.Receive(conn)
+	id := crypto.Decrypt(encrypted_id, c.aes_key)
 	return s.keys[string(id)]
 }
 
@@ -314,7 +306,8 @@ func list(s *Server) string {
 	//reader := io.Reader("hi")
 	resp, err := http.PostForm("http://127.0.0.1:8000/list_files", v)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Print("There was an error connecting to the server, please ensure the cloud server is turned on")
+		log.Fatal(err)
 	}
 
 	body := make([]byte, resp.ContentLength)
@@ -328,54 +321,29 @@ func handle_commands(conn net.Conn, client Client, s *Server) {
 	fmt.Println("Handling commands")
 	for {
 		fmt.Println("About to recv command")
-		data := receive(conn)
+
+		encrypted_data := network.Receive(conn)
+
 		fmt.Println("Received command, about to decrypt")
 		// Have data, now decrypt with aes
-		plain := string(decrypt(data, client.aes_key))
+		plain := string(crypto.Decrypt(encrypted_data, client.aes_key))
 		fmt.Println("Got a plain: ")
 		fmt.Println(plain)
 		if plain == "ls" {
 			response := []byte(list(s))
-			size := make([]byte, 8)
-			binary.LittleEndian.PutUint32(size, uint32(len(response)))
-			_, _ = conn.Write(size)
-			_, _ = conn.Write(response)
+			encrypted_response := crypto.Encrypt(response, client.aes_key)
+			network.Send(conn, encrypted_response)
 		} else if plain == "HK" {
 			fmt.Println("Attempting to register a new key")
-			//response := []byte(
 			s.put_key(conn, client) //)
-			/*size := make([]byte, 8)
-			binary.LittleEndian.PutUint32(size, uint32(len(response)))
-			_, _ = conn.Write(size)
-			_, _ = conn.Write(response)*/
 
 		} else if plain == "CK" {
 			fmt.Println("Attempting to get a key for a user")
 			response := []byte(s.get_key(conn, client))
-			size := make([]byte, 8)
-			binary.LittleEndian.PutUint32(size, uint32(len(response)))
-			fmt.Println(len(response))
-			_, _ = conn.Write(size)
-			_, _ = conn.Write(response)
-
+			encrypted_response := crypto.Encrypt(response, client.aes_key)
+			network.Send(conn, encrypted_response)
 		}
 	}
-}
-
-func decrypt(data []byte, key []byte) []byte {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("\nThe length of the data is: %d This should have the iv at the end", len(data))
-	iv := data[len(data)-16:]
-
-	ciphertext := data[:len(data)-16]
-	cfb := cipher.NewCFBDecrypter(block, iv)
-	plaintext := make([]byte, len(ciphertext))
-	cfb.XORKeyStream(plaintext, ciphertext)
-	return plaintext
 }
 
 func acceptSessions(server *Server, clients map[string]Client) {
@@ -393,6 +361,23 @@ func acceptSessions(server *Server, clients map[string]Client) {
 	}
 }
 
+func (c *Client) send(conn net.Conn, data []byte) {
+	ciphertext := crypto.Encrypt(data, c.aes_key)
+	size := len(ciphertext)
+	size_bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(size_bytes, uint64(size))
+	_, err := conn.Write(size_bytes)
+	if err != nil {
+		fmt.Println("Error in query")
+		log.Fatal(err)
+	}
+
+	_, err = conn.Write(ciphertext)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func receive(c net.Conn) []byte {
 	size_bytes := make([]byte, 8)
 	_, err := io.ReadFull(c, size_bytes)
@@ -404,6 +389,6 @@ func receive(c net.Conn) []byte {
 	fmt.Printf("\nGot a size: %d", size)
 	data := make([]byte, size)
 	_, err = io.ReadFull(c, data)
-
+	fmt.Println("Got data")
 	return data
 }

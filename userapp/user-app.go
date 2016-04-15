@@ -1,9 +1,6 @@
 package main
 
 import (
-	"../crypto"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -14,52 +11,11 @@ import (
 	"os"
 )
 
-// encrypt, allowing a specified key
-func encrypt_with_key(data []byte, key []byte) []byte {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		fmt.Println("There has been an encryption error. Program will now terminate")
-		log.Fatal(err)
-	}
-
-	var iv []byte
-	_, err = rand.Read(iv)
-	if err != nil {
-		log.Fatal(err)
-	}
-	iv = make([]byte, 32)
-
-	cfb := cipher.NewCFBEncrypter(block, iv)
-	ciphertext := make([]byte, len(data))
-	cfb.XORKeyStream(ciphertext, data)
-
-	// Append the iv to the ciphertext
-	return append(ciphertext, iv...)
-}
-
-// decrypt, allowing a specified key
-func decrypt_with_key(data []byte, key []byte) []byte {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		fmt.Println("There has been a decryption error. program will now terminate")
-		log.Fatal(err)
-	}
-
-	// Extract iv from end of ciphertext
-	iv := data[len(data)-32:]
-
-	cfb := cipher.NewCFBDecrypter(block, iv)
-	cfb.XORKeyStream(data[:len(data)-32], data)
-
-	return data
-}
-
 func findServer() string {
 	return "127.0.0.1"
 }
 
 func main() {
-	crypto.test()
 
 	f, err := os.OpenFile("userapp.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
