@@ -1,14 +1,14 @@
 package main
 
 import (
-	"../crypto"
-	"../network"
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/binary"
 	"fmt"
+	"github.com/KillianDavitt/SecureCloud/crypto"
+	"github.com/KillianDavitt/SecureCloud/network"
 	"io"
 	"log"
 	"mime/multipart"
