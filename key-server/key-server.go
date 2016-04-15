@@ -1,8 +1,6 @@
 package main
 
 import (
-	"../crypto"
-	"../network"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -10,6 +8,8 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"fmt"
+	"github.com/KillianDavitt/SecureCloud/crypto"
+	"github.com/KillianDavitt/SecureCloud/network"
 	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"io/ioutil"
