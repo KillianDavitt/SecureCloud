@@ -1,8 +1,10 @@
 # Secure Cloud
 [![Build Status](https://travis-ci.org/KillianDavitt/SecureCloud.svg?branch=master)](https://travis-ci.org/KillianDavitt/SecureCloud)
-[![Go Report Card](https://goreportcard.com/badge/github.com/KillianDavitt/SecureCloud)](https://goreportcard.com/report/github.com/KillianDavitt/SecureCloud)
+[![Go Report Card](https://goreportcard.com/badge/github.com/KillianDavitt/SecureCloud?x=3)](https://goreportcard.com/report/github.com/KillianDavitt/SecureCloud?x=5)
 
 A file encryption application for https://www.github.com/KillianDavitt/ClassCloud
+
+Uses AES256 bit encryption to encrypt your files before uploading them to an instance of 'ClassCloud'
 
 # Introduction
 The application consists of two programs, both written in go; the user application and the key server.
