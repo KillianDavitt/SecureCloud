@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func test_decrypt(t *testing.T) {
+func testDecrypt(t *testing.T) {
 
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
@@ -14,25 +14,25 @@ func test_decrypt(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	original_plaintext := "Hi, this is a test of the encryption/decryption"
+	originalPlaintext := "Hi, this is a test of the encryption/decryption"
 
-	ciphertext := Encrypt([]byte(original_plaintext), key)
+	ciphertext := Encrypt([]byte(originalPlaintext), key)
 
 	plaintext := Decrypt(ciphertext, key)
 
-	if string(plaintext) != original_plaintext {
+	if string(plaintext) != originalPlaintext {
 		t.Error("Decrypted text does not match original plaintext")
 	}
 
-	other_key := make([]byte, 32)
-	_, err = rand.Read(other_key)
+	otherKey := make([]byte, 32)
+	_, err = rand.Read(otherKey)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	incorrect_plaintext := Decrypt(ciphertext, other_key)
+	incorrectPlaintext := Decrypt(ciphertext, otherKey)
 
-	if string(incorrect_plaintext) == original_plaintext {
+	if string(incorrectPlaintext) == originalPlaintext {
 		t.Error("Different keys produced correct plaintext, this is a severe problem")
 	}
 

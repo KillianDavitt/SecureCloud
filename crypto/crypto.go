@@ -8,8 +8,9 @@ import (
 	"log"
 )
 
-const BLOCK_SIZE int = 16
+const blockSize int = 16
 
+// Decrypt function takes a key and encrypted bytes and returns decrypted data
 func Decrypt(data []byte, key []byte) []byte {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -18,8 +19,8 @@ func Decrypt(data []byte, key []byte) []byte {
 	}
 
 	// Extract the iv from the end of ciphertext
-	iv := data[len(data)-BLOCK_SIZE:]
-	ciphertext := data[:len(data)-BLOCK_SIZE]
+	iv := data[len(data)-blockSize:]
+	ciphertext := data[:len(data)-blockSize]
 
 	plaintext := make([]byte, len(ciphertext))
 
@@ -28,6 +29,7 @@ func Decrypt(data []byte, key []byte) []byte {
 	return plaintext
 }
 
+// Encrypt function takes a key and data and returns encrypted data
 func Encrypt(plaintext []byte, key []byte) []byte {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -36,7 +38,7 @@ func Encrypt(plaintext []byte, key []byte) []byte {
 	}
 
 	var iv []byte
-	iv = make([]byte, BLOCK_SIZE)
+	iv = make([]byte, blockSize)
 	_, err = rand.Read(iv)
 	if err != nil {
 		log.Fatal(err)
