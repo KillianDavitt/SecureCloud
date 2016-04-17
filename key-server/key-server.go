@@ -228,14 +228,6 @@ func session(s *Server, conn net.Conn, c map[string]Client) {
 	map_index := client_pub.N.String()
 	client := c[map_index]
 
-	trusted := false
-	if client.initis() {
-		fmt.Printf("\nWe've seen this user before: %s", client.username)
-		if client.trusted {
-			fmt.Println("This user is trusted")
-			trusted = true
-		}
-	}
 	server_pub_bytes, err := x509.MarshalPKIXPublicKey(&s.pub)
 	if err != nil {
 		log.Fatal(err)
@@ -276,6 +268,21 @@ func session(s *Server, conn net.Conn, c map[string]Client) {
 		log.Fatal(err)
 	}
 	name := string(response)
+
+	negotiateTrust(conn, s, client_pub_bytes, client, name)
+}
+
+func negotiateTrust(conn net.Conn, s *Server, client_pub_bytes []byte, client Client, name string) {
+
+	trusted := false
+	if client.initis() {
+		fmt.Printf("\nWe've seen this user before: %s", client.username)
+		if client.trusted {
+			fmt.Println("This user is trusted")
+			trusted = true
+		}
+	}
+
 	var answer string
 	fmt.Println(trusted)
 	if !trusted {
@@ -289,6 +296,7 @@ func session(s *Server, conn net.Conn, c map[string]Client) {
 		fmt.Println("You have allowed this user")
 		trusted = true
 		var stmt *sql.Stmt
+		var err error
 		if !client.trusted {
 			stmt, err = s.db.Prepare("INSERT INTO users(username, pub_key, trusted) values(?,?, ?);")
 			if err != nil {
@@ -304,7 +312,9 @@ func session(s *Server, conn net.Conn, c map[string]Client) {
 		handle_commands(conn, client, s)
 	}
 	fmt.Println("Session Ended....")
+
 }
+
 func list(s *Server) string {
 	v := url.Values{}
 	v.Set("token", "0SKvdYWC6xR0wk9VKBtJDzn47Hpocbd1")
