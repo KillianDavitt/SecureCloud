@@ -115,6 +115,9 @@ func (s *Server) put(filename string) {
 	// Check the response
 	if res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("bad status: %s", res.Status)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	body := make([]byte, res.ContentLength)
@@ -162,12 +165,15 @@ func (s *Server) rm(filename string) {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Print(err)
+		log.Fatal(err)
 	}
 
 	// Check the response
 	if res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("bad status: %s", res.Status)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	body := make([]byte, res.ContentLength)
@@ -236,6 +242,9 @@ func (s *Server) get(filename string) {
 	// Check the response
 	if res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("bad status: %s", res.Status)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	body := make([]byte, res.ContentLength)

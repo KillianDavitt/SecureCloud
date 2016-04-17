@@ -389,6 +389,9 @@ func receive(c net.Conn) []byte {
 	fmt.Printf("\nGot a size: %d", size)
 	data := make([]byte, size)
 	_, err = io.ReadFull(c, data)
+	if err != nil {
+		log.Fatal(err)
+	}
 	fmt.Println("Got data")
 	return data
 }

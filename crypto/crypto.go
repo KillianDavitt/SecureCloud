@@ -38,6 +38,9 @@ func Encrypt(plaintext []byte, key []byte) []byte {
 	var iv []byte
 	iv = make([]byte, BLOCK_SIZE)
 	_, err = rand.Read(iv)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	cfb := cipher.NewCFBEncrypter(block, iv)
 	ciphertext := make([]byte, len(plaintext))
