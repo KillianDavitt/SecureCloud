@@ -35,7 +35,7 @@ func main() {
 	// Check for a local key
 	// If yes, get key from server
 	//usr, err := user.Current()
-	priv_file, err := os.Open("key.priv")
+	privFile, err := os.Open("key.priv")
 	registered := err == nil
 	var pub rsa.PublicKey
 	var priv rsa.PrivateKey
@@ -44,36 +44,36 @@ func main() {
 		// Including
 		// Here, keys are on file and need to read them in
 		fmt.Println("\nReading in client keys from disk.....")
-		var private_pem []byte
-		private_pem = make([]byte, 1024)
-		_, err := priv_file.Read(private_pem)
+		var privatePem []byte
+		privatePem = make([]byte, 1024)
+		_, err := privFile.Read(privatePem)
 		if err != nil {
 			log.Fatal(err)
 		}
 		//func ParsePKCS1PrivateKey(der []byte) (key *rsa.PrivateKey, err error)
-		private_bytes, _ := pem.Decode(private_pem)
-		priv_key, err := x509.ParsePKCS1PrivateKey(private_bytes.Bytes)
+		privateBytes, _ := pem.Decode(privatePem)
+		privateKey, err := x509.ParsePKCS1PrivateKey(privateBytes.Bytes)
 		if err != nil {
 			fmt.Println(err)
 		}
-		priv = *priv_key
-		pub_file, err := os.Open("key.pub")
+		priv = *privateKey
+		publicFile, err := os.Open("key.pub")
 
-		var public_pem []byte
-		public_pem = make([]byte, 1024)
-		_, err = pub_file.Read(public_pem)
+		var publicPem []byte
+		publicPem = make([]byte, 1024)
+		_, err = publicFile.Read(publicPem)
 		if err != nil {
 			log.Fatal(err)
 		}
 		//func ParsePKCS1PrivateKey(der []byte) (key *rsa.PrivateKey, err error)
-		public_bytes, _ := pem.Decode(public_pem)
-		pub_key_interface, err := x509.ParsePKIXPublicKey(public_bytes.Bytes)
+		publicBytes, _ := pem.Decode(publicPem)
+		publicKeyInterface, err := x509.ParsePKIXPublicKey(publicBytes.Bytes)
 		if err != nil {
 			fmt.Println(err)
 		}
-		var pub_key rsa.PublicKey
-		pub_key = *pub_key_interface.(*rsa.PublicKey)
-		pub = pub_key
+		var publicKey rsa.PublicKey
+		publicKey = *publicKeyInterface.(*rsa.PublicKey)
+		pub = publicKey
 
 	} else {
 		// If we are not registered, we need to create keys and save them to disk

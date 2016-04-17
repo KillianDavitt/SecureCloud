@@ -21,19 +21,19 @@ import (
 )
 
 type server struct {
-	conn       net.Conn
-	priv       rsa.PrivateKey
-	pub        rsa.PublicKey
-	server_pub rsa.PublicKey
-	aes_key    []byte
-	current_ls map[string]string
+	conn      net.Conn
+	priv      rsa.PrivateKey
+	pub       rsa.PublicKey
+	serverPub rsa.PublicKey
+	aesKey    []byte
+	currentLs map[string]string
 }
 
-func (s *server) get_key(id string) []byte {
+func (s *server) getKey(id string) []byte {
 	s.query([]byte("CK"))
 	s.query([]byte(id))
-	encrypted_response := network.Receive(s.conn)
-	response := crypto.Decrypt(encrypted_response, s.aes_key)
+	encryptedResponse := network.Receive(s.conn)
+	response := crypto.Decrypt(encryptedResponse, s.aesKey)
 	fmt.Printf("\nId we got is: %s", response)
 	return response
 }
@@ -97,10 +97,10 @@ func (s *server) put(filename string) {
 	// If you don't close it, your request will be missing the terminating boundary.
 	w.Close()
 
-	url_s := "http://127.0.0.1:8000/put_file"
+	urlS := "http://127.0.0.1:8000/put_file"
 
 	// Now that you have a form, you can submit it to your handler.
-	req, err := http.NewRequest("POST", url_s, &b)
+	req, err := http.NewRequest("POST", urlS, &b)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -137,8 +137,8 @@ func (s *server) rm(filename string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(s.current_ls[filename])
-	if _, err := fw.Write([]byte(s.current_ls[filename])); err != nil {
+	fmt.Println(s.currentLs[filename])
+	if _, err := fw.Write([]byte(s.currentLs[filename])); err != nil {
 		log.Fatal(err)
 	}
 
@@ -153,10 +153,10 @@ func (s *server) rm(filename string) {
 	// If you don't close it, your request will be missing the terminating boundary.
 	w.Close()
 
-	url_s := "http://127.0.0.1:8000/rm_file"
+	urlS := "http://127.0.0.1:8000/rm_file"
 
 	// Now that you have a form, you can submit it to your handler.
-	req, err := http.NewRequest("POST", url_s, &b)
+	req, err := http.NewRequest("POST", urlS, &b)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -215,8 +215,8 @@ func (s *server) get(filename string) {
 	if fw, err = w.CreateFormField("id"); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(s.current_ls[filename])
-	if _, err = fw.Write([]byte(s.current_ls[filename])); err != nil {
+	fmt.Println(s.currentLs[filename])
+	if _, err = fw.Write([]byte(s.currentLs[filename])); err != nil {
 		log.Fatal(err)
 	}
 
@@ -224,10 +224,10 @@ func (s *server) get(filename string) {
 	// If you don't close it, your request will be missing the terminating boundary.
 	w.Close()
 
-	url_s := "http://127.0.0.1:8000/get_file/" + s.current_ls[filename]
+	urlS := "http://127.0.0.1:8000/get_file/" + s.currentLs[filename]
 
 	// Now that you have a form, you can submit it to your handler.
-	req, err := http.NewRequest("GET", url_s, &b)
+	req, err := http.NewRequest("GET", urlS, &b)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -250,7 +250,7 @@ func (s *server) get(filename string) {
 	body := make([]byte, res.ContentLength)
 	res.Body.Read(body)
 
-	key := s.get_key(s.current_ls[filename])
+	key := s.getKey(s.currentLs[filename])
 
 	fmt.Print(string(crypto.Decrypt(body, key)))
 
@@ -260,12 +260,12 @@ func (s *server) get(filename string) {
 
 func (s *server) ls() {
 	s.query([]byte("ls"))
-	encrypted_response := network.Receive(s.conn)
-	response := crypto.Decrypt(encrypted_response, s.aes_key)
+	encryptedResponse := network.Receive(s.conn)
+	response := crypto.Decrypt(encryptedResponse, s.aesKey)
 
-	response_string := string(response)
-	files_list := make(map[string]string)
-	files := strings.Split(response_string, "[")
+	responseString := string(response)
+	filesList := make(map[string]string)
+	files := strings.Split(responseString, "[")
 	for i := 2; i < len(files)-1; i++ {
 		files[i] = strings.Replace(files[i], "]", "", -1)
 		files[i] = strings.Replace(files[i], " ", "", -1)
@@ -273,32 +273,32 @@ func (s *server) ls() {
 		files[i] = strings.Replace(files[i], "\n", "", -1)
 
 		temp := strings.Split(files[i], ",")
-		files_list[temp[1]] = temp[0]
+		filesList[temp[1]] = temp[0]
 	}
 
-	for k, _ := range files_list {
+	for k := range filesList {
 		if k == "" || k == "\n" {
-			delete(files_list, k)
+			delete(filesList, k)
 		}
 	}
-	fmt.Println(response_string)
-	for k, _ := range files_list {
+	fmt.Println(responseString)
+	for k := range filesList {
 		fmt.Println(k)
 	}
 
-	s.current_ls = files_list
+	s.currentLs = filesList
 }
 
-func (s *server) decrypt_message(data []byte) []byte {
-	return crypto.Decrypt(data, s.aes_key)
+func (s *server) decryptMessage(data []byte) []byte {
+	return crypto.Decrypt(data, s.aesKey)
 }
 
-func (s *server) encrypt_message(data []byte) []byte {
-	return crypto.Encrypt(data, s.aes_key)
+func (s *server) encryptMessage(data []byte) []byte {
+	return crypto.Encrypt(data, s.aesKey)
 }
 
 func (s *server) query(data []byte) {
-	ciphertext := s.encrypt_message(data)
+	ciphertext := s.encryptMessage(data)
 	network.Send(s.conn, ciphertext)
 }
 
@@ -315,11 +315,11 @@ func (s *server) serverInit(ip string, priv rsa.PrivateKey, pub rsa.PublicKey, n
 
 	// Send over our pub
 	fmt.Println("\nAbout to send our pub")
-	pub_bytes, err := x509.MarshalPKIXPublicKey(&pub)
+	publicBytes, err := x509.MarshalPKIXPublicKey(&pub)
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = conn.Write(pub_bytes)
+	_, err = conn.Write(publicBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -329,31 +329,31 @@ func (s *server) serverInit(ip string, priv rsa.PrivateKey, pub rsa.PublicKey, n
 	if err != nil {
 		log.Fatal(err)
 	}
-	s.aes_key = key
+	s.aesKey = key
 
 	// Next we need to receive the servers pub
-	server_pub_bytes := make([]uint8, 162)
-	_, err = io.ReadFull(conn, server_pub_bytes)
+	serverPublicBytes := make([]uint8, 162)
+	_, err = io.ReadFull(conn, serverPublicBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	server_pub_interface, err := x509.ParsePKIXPublicKey(server_pub_bytes)
+	serverPublicInterface, err := x509.ParsePKIXPublicKey(serverPublicBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var server_pub rsa.PublicKey
-	server_pub = *server_pub_interface.(*rsa.PublicKey)
+	var serverPub rsa.PublicKey
+	serverPub = *serverPublicInterface.(*rsa.PublicKey)
 	fmt.Println("Successfully received a public key from the server")
-	s.server_pub = server_pub
+	s.serverPub = serverPub
 	// Send the key onto server the Python after encrypting
 	fmt.Println("Attempting to encrypt and send aes key")
 	rng := rand.Reader
-	pubk := &server_pub
-	encrypted_aes_key, err := rsa.EncryptPKCS1v15(rng, pubk, key)
-	fmt.Println(len(encrypted_aes_key))
-	_, err = conn.Write(encrypted_aes_key)
+	pubk := &serverPub
+	encryptedAesKey, err := rsa.EncryptPKCS1v15(rng, pubk, key)
+	fmt.Println(len(encryptedAesKey))
+	_, err = conn.Write(encryptedAesKey)
 	if err != nil {
 		log.Fatal(err)
 	}
