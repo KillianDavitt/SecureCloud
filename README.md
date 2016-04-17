@@ -1,5 +1,6 @@
 # Secure Cloud
 [![Build Status](https://travis-ci.org/KillianDavitt/SecureCloud.svg?branch=master)](https://travis-ci.org/KillianDavitt/SecureCloud)
+[![Go Report Card](https://goreportcard.com/badge/github.com/KillianDavitt/SecureCloud)](https://goreportcard.com/report/github.com/KillianDavitt/SecureCloud)
 
 A file encryption application for https://www.github.com/KillianDavitt/ClassCloud
 
