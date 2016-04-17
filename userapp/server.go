@@ -20,7 +20,7 @@ import (
 	"strings"
 )
 
-type Server struct {
+type server struct {
 	conn       net.Conn
 	priv       rsa.PrivateKey
 	pub        rsa.PublicKey
@@ -29,7 +29,7 @@ type Server struct {
 	current_ls map[string]string
 }
 
-func (s *Server) get_key(id string) []byte {
+func (s *server) get_key(id string) []byte {
 	s.query([]byte("CK"))
 	s.query([]byte(id))
 	encrypted_response := network.Receive(s.conn)
@@ -38,7 +38,7 @@ func (s *Server) get_key(id string) []byte {
 	return response
 }
 
-func (s *Server) put(filename string) {
+func (s *server) put(filename string) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 	// Add your image file
@@ -130,7 +130,7 @@ func (s *Server) put(filename string) {
 	s.query(body)
 }
 
-func (s *Server) rm(filename string) {
+func (s *server) rm(filename string) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 	fw, err := w.CreateFormField("id")
@@ -183,7 +183,7 @@ func (s *Server) rm(filename string) {
 
 }
 
-func (s *Server) get(filename string) {
+func (s *server) get(filename string) {
 	_, fname, _, _ := runtime.Caller(1)
 	f, err := os.Create(path.Join(path.Dir(fname)+"/files", filename))
 	if err != nil {
@@ -258,7 +258,7 @@ func (s *Server) get(filename string) {
 	f.Write(body)
 }
 
-func (s *Server) ls() {
+func (s *server) ls() {
 	s.query([]byte("ls"))
 	encrypted_response := network.Receive(s.conn)
 	response := crypto.Decrypt(encrypted_response, s.aes_key)
@@ -289,20 +289,20 @@ func (s *Server) ls() {
 	s.current_ls = files_list
 }
 
-func (s *Server) decrypt_message(data []byte) []byte {
+func (s *server) decrypt_message(data []byte) []byte {
 	return crypto.Decrypt(data, s.aes_key)
 }
 
-func (s *Server) encrypt_message(data []byte) []byte {
+func (s *server) encrypt_message(data []byte) []byte {
 	return crypto.Encrypt(data, s.aes_key)
 }
 
-func (s *Server) query(data []byte) {
+func (s *server) query(data []byte) {
 	ciphertext := s.encrypt_message(data)
 	network.Send(s.conn, ciphertext)
 }
 
-func (s *Server) serverInit(ip string, priv rsa.PrivateKey, pub rsa.PublicKey, name string) {
+func (s *server) serverInit(ip string, priv rsa.PrivateKey, pub rsa.PublicKey, name string) {
 	conn, err := net.Dial("tcp", ip+":2222")
 	if err != nil {
 		fmt.Println("\nApplication was unable to connect to the key server.\nPlease check the status of the key server or inform your key server manager of this error.\nAnotherpossible issue may be closed ports on the key servers connection.")

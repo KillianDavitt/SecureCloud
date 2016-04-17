@@ -30,7 +30,7 @@ func main() {
 	ip := findServer()
 	fmt.Println("Address found...")
 
-	var ser Server
+	var ser server
 	server := &ser
 	// Check for a local key
 	// If yes, get key from server
