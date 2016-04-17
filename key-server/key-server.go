@@ -34,27 +34,27 @@ type Client struct {
 	init     bool
 	username string
 	pub      rsa.PublicKey
-	aes_key  []byte
+	aesKey   []byte
 	trusted  bool
 }
 
-func (s *Server) put_key(conn net.Conn, c Client) {
-	encrypted_key := network.Receive(conn)
-	key := crypto.Decrypt(encrypted_key, c.aes_key)
+func (s *Server) putKey(conn net.Conn, c Client) {
+	encryptedKey := network.Receive(conn)
+	key := crypto.Decrypt(encryptedKey, c.aesKey)
 	id := make([]byte, 10)
 	_, err := io.ReadFull(conn, id)
 	if err != nil {
 		log.Fatal(err)
 	}
-	id = crypto.Decrypt(id, c.aes_key)
+	id = crypto.Decrypt(id, c.aesKey)
 	fmt.Println(string(id))
 	s.keys[string(id)] = key
 	fmt.Println(s.keys[string(id)])
 }
 
-func (s *Server) get_key(conn net.Conn, c Client) []byte {
-	encrypted_id := network.Receive(conn)
-	id := crypto.Decrypt(encrypted_id, c.aes_key)
+func (s *Server) getKey(conn net.Conn, c Client) []byte {
+	encryptedId := network.Receive(conn)
+	id := crypto.Decrypt(encryptedId, c.aesKey)
 	return s.keys[string(id)]
 }
 
@@ -67,7 +67,7 @@ func main() {
 
 	clients := make(map[string]Client)
 
-	rows, err := db.Query("SELECT username,pub_key,trusted FROM users")
+	rows, err := db.Query("SELECT username,pubKey,trusted FROM users")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -76,29 +76,29 @@ func main() {
 	for rows.Next() {
 		var c Client
 		var username string
-		var pub_key_bytes []byte
+		var pubKeyBytes []byte
 		var trusted bool
-		err = rows.Scan(&username, &pub_key_bytes, &trusted)
+		err = rows.Scan(&username, &pubKeyBytes, &trusted)
 		if err != nil {
 			log.Fatal(err)
 		}
 		fmt.Print("\nLoaded user: ")
 		fmt.Print(username)
-		//func ParsePKCS1PrivateKey(der []byte) (key *rsa.PrivateKey, err error)
-		pub_key_interface, err := x509.ParsePKIXPublicKey(pub_key_bytes)
+		//func parsePKCS1PrivateKey(der []byte) (key *rsa.privateKey, err error)
+		pubKeyInterface, err := x509.ParsePKIXPublicKey(pubKeyBytes)
 		if err != nil {
 			log.Fatal(err)
 		}
-		var pub_key rsa.PublicKey
-		pub_key = *pub_key_interface.(*rsa.PublicKey)
+		var pubKey rsa.PublicKey
+		pubKey = *pubKeyInterface.(*rsa.PublicKey)
 
-		c.pub = pub_key
+		c.pub = pubKey
 		c.init = true
 		c.username = username
 		c.trusted = trusted
-		map_index := pub_key.N.String()
+		mapIndex := pubKey.N.String()
 
-		clients[map_index] = c
+		clients[mapIndex] = c
 
 	}
 
@@ -113,7 +113,7 @@ func main() {
 	var pub *rsa.PublicKey
 	var priv *rsa.PrivateKey
 
-	priv_file, err := os.Open("key.priv")
+	privFile, err := os.Open("key.priv")
 	if err != nil {
 		// In here means we have no key and need to gen one
 		// we need to create keys and save them to disk
@@ -126,14 +126,14 @@ func main() {
 		s.pub = *pub
 
 		// Now, write keys to disk
-		PubASN1, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
+		pubASN1, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 		if err != nil {
 			// do something about it
 		}
 
 		pubBytes := pem.EncodeToMemory(&pem.Block{
 			Type:  "RSA PUBLIC KEY",
-			Bytes: PubASN1,
+			Bytes: pubASN1,
 		})
 
 		fmt.Print("\nWriting public key to disk....")
@@ -152,36 +152,36 @@ func main() {
 	} else {
 		// Here, keys are on file and need to read them in
 		fmt.Println("\nReading in server keys from disk.....")
-		var private_pem []byte
-		private_pem = make([]byte, 1024)
-		_, err := priv_file.Read(private_pem)
+		var privatePem []byte
+		privatePem = make([]byte, 1024)
+		_, err := privFile.Read(privatePem)
 		if err != nil {
 			log.Fatal(err)
 		}
-		//func ParsePKCS1PrivateKey(der []byte) (key *rsa.PrivateKey, err error)
-		private_bytes, _ := pem.Decode(private_pem)
-		priv_key, err := x509.ParsePKCS1PrivateKey(private_bytes.Bytes)
+		//func parsePKCS1PrivateKey(der []byte) (key *rsa.privateKey, err error)
+		privateBytes, _ := pem.Decode(privatePem)
+		privKey, err := x509.ParsePKCS1PrivateKey(privateBytes.Bytes)
 		if err != nil {
 			fmt.Println(err)
 		}
-		s.priv = *priv_key
-		pub_file, err := os.Open("key.pub")
+		s.priv = *privKey
+		pubFile, err := os.Open("key.pub")
 
-		var public_pem []byte
-		public_pem = make([]byte, 1024)
-		_, err = pub_file.Read(public_pem)
+		var publicPem []byte
+		publicPem = make([]byte, 1024)
+		_, err = pubFile.Read(publicPem)
 		if err != nil {
 			log.Fatal(err)
 		}
-		//func ParsePKCS1PrivateKey(der []byte) (key *rsa.PrivateKey, err error)
-		public_bytes, _ := pem.Decode(public_pem)
-		pub_key_interface, err := x509.ParsePKIXPublicKey(public_bytes.Bytes)
+		//func parsePKCS1PrivateKey(der []byte) (key *rsa.privateKey, err error)
+		publicBytes, _ := pem.Decode(publicPem)
+		pubKeyInterface, err := x509.ParsePKIXPublicKey(publicBytes.Bytes)
 		if err != nil {
 			fmt.Println(err)
 		}
-		var pub_key rsa.PublicKey
-		pub_key = *pub_key_interface.(*rsa.PublicKey)
-		s.pub = pub_key
+		var pubKey rsa.PublicKey
+		pubKey = *pubKeyInterface.(*rsa.PublicKey)
+		s.pub = pubKey
 
 	}
 	fmt.Println("Assigned All vars")
@@ -192,7 +192,7 @@ func main() {
 	fmt.Println(" ")
 	////////////////done := false
 	/*for done != true {
-		fmt.Print("SecureCloud>")
+		fmt.Print("secureCloud>")
 		var command string
 		//fmt.Scanf("%s", &command)
 		fmt.Println(command)
@@ -201,19 +201,19 @@ func main() {
 }
 
 func recievePublicKey(conn net.Conn) (rsa.PublicKey, []byte) {
-	client_pub_bytes := make([]uint8, 162)
-	_, err := io.ReadFull(conn, client_pub_bytes)
+	clientPubBytes := make([]uint8, 162)
+	_, err := io.ReadFull(conn, clientPubBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
-	client_pub_interface, err := x509.ParsePKIXPublicKey(client_pub_bytes)
+	clientPubInterface, err := x509.ParsePKIXPublicKey(clientPubBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var client_pub rsa.PublicKey
-	client_pub = *client_pub_interface.(*rsa.PublicKey)
+	var clientPub rsa.PublicKey
+	clientPub = *clientPubInterface.(*rsa.PublicKey)
 	fmt.Println("Sucessfully received a public key from this user...")
-	return client_pub, client_pub_bytes
+	return clientPub, clientPubBytes
 }
 
 func session(s *Server, conn net.Conn, c map[string]Client) {
@@ -223,39 +223,39 @@ func session(s *Server, conn net.Conn, c map[string]Client) {
 	// Send our public key
 
 	// Receive their public key
-	client_pub, client_pub_bytes := recievePublicKey(conn)
+	clientPub, clientPubBytes := recievePublicKey(conn)
 	// We have the pub, do we know this person?
-	map_index := client_pub.N.String()
-	client := c[map_index]
+	mapIndex := clientPub.N.String()
+	client := c[mapIndex]
 
-	server_pub_bytes, err := x509.MarshalPKIXPublicKey(&s.pub)
+	serverPubBytes, err := x509.MarshalPKIXPublicKey(&s.pub)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, err = conn.Write(server_pub_bytes)
+	_, err = conn.Write(serverPubBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Negotiate an aes key
 	// Receive a blob, decrypt it with our priv key
-	//func ReadAtLeast(r Reader, buf []byte, min int) (n int, err error)
-	encrypted_aes_key := make([]byte, 128)
-	_, err = io.ReadFull(conn, encrypted_aes_key)
+	//func readAtLeast(r Reader, buf []byte, min int) (n int, err error)
+	encryptedAesKey := make([]byte, 128)
+	_, err = io.ReadFull(conn, encryptedAesKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//DecryptPKCS1v15(rand io.Reader, priv *PrivateKey, ciphertext []byte) (out []byte, err error)
+	//decryptPKCS1v15(rand io.Reader, priv *privateKey, ciphertext []byte) (out []byte, err error)
 	rng := rand.Reader
-	aes_key, err := rsa.DecryptPKCS1v15(rng, &s.priv, encrypted_aes_key)
+	aesKey, err := rsa.DecryptPKCS1v15(rng, &s.priv, encryptedAesKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	client.aes_key = aes_key
+	client.aesKey = aesKey
 
-	size_bytes := make([]uint8, 4)
-	n, err := io.ReadFull(conn, size_bytes)
-	size := binary.LittleEndian.Uint32(size_bytes)
+	sizeBytes := make([]uint8, 4)
+	n, err := io.ReadFull(conn, sizeBytes)
+	size := binary.LittleEndian.Uint32(sizeBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -269,10 +269,10 @@ func session(s *Server, conn net.Conn, c map[string]Client) {
 	}
 	name := string(response)
 
-	negotiateTrust(conn, s, client_pub_bytes, client, name)
+	negotiateTrust(conn, s, clientPubBytes, client, name)
 }
 
-func negotiateTrust(conn net.Conn, s *Server, client_pub_bytes []byte, client Client, name string) {
+func negotiateTrust(conn net.Conn, s *Server, clientPubBytes []byte, client Client, name string) {
 
 	trusted := false
 	if client.initis() {
@@ -298,18 +298,18 @@ func negotiateTrust(conn net.Conn, s *Server, client_pub_bytes []byte, client Cl
 		var stmt *sql.Stmt
 		var err error
 		if !client.trusted {
-			stmt, err = s.db.Prepare("INSERT INTO users(username, pub_key, trusted) values(?,?, ?);")
+			stmt, err = s.db.Prepare("INSERT INTO users(username, pubKey, trusted) values(?,?, ?);")
 			if err != nil {
 				log.Fatal(err)
 			}
-			res, err := stmt.Exec(name, client_pub_bytes, trusted)
+			res, err := stmt.Exec(name, clientPubBytes, trusted)
 			if err != nil {
 				log.Fatal(err)
 			}
 			fmt.Println(res)
 
 		}
-		handle_commands(conn, client, s)
+		handleCommands(conn, client, s)
 	}
 	fmt.Println("Session Ended....")
 
@@ -319,7 +319,7 @@ func list(s *Server) string {
 	v := url.Values{}
 	v.Set("token", "0SKvdYWC6xR0wk9VKBtJDzn47Hpocbd1")
 	//reader := io.Reader("hi")
-	resp, err := http.PostForm("http://127.0.0.1:8000/list_files", v)
+	resp, err := http.PostForm("http://127.0.0.1:8000/listFiles", v)
 	if err != nil {
 		fmt.Print("There was an error connecting to the server, please ensure the cloud server is turned on")
 		log.Fatal(err)
@@ -331,32 +331,32 @@ func list(s *Server) string {
 
 }
 
-func handle_commands(conn net.Conn, client Client, s *Server) {
+func handleCommands(conn net.Conn, client Client, s *Server) {
 	// Listen for "ls" or "put" or anything like that
 	fmt.Println("Handling commands")
 	for {
 		fmt.Println("About to recv command")
 
-		encrypted_data := network.Receive(conn)
+		encryptedData := network.Receive(conn)
 
 		fmt.Println("Received command, about to decrypt")
 		// Have data, now decrypt with aes
-		plain := string(crypto.Decrypt(encrypted_data, client.aes_key))
+		plain := string(crypto.Decrypt(encryptedData, client.aesKey))
 		fmt.Println("Got a plain: ")
 		fmt.Println(plain)
 		if plain == "ls" {
 			response := []byte(list(s))
-			encrypted_response := crypto.Encrypt(response, client.aes_key)
-			network.Send(conn, encrypted_response)
+			encryptedResponse := crypto.Encrypt(response, client.aesKey)
+			network.Send(conn, encryptedResponse)
 		} else if plain == "HK" {
 			fmt.Println("Attempting to register a new key")
-			s.put_key(conn, client) //)
+			s.putKey(conn, client) //)
 
 		} else if plain == "CK" {
 			fmt.Println("Attempting to get a key for a user")
-			response := []byte(s.get_key(conn, client))
-			encrypted_response := crypto.Encrypt(response, client.aes_key)
-			network.Send(conn, encrypted_response)
+			response := []byte(s.getKey(conn, client))
+			encryptedResponse := crypto.Encrypt(response, client.aesKey)
+			network.Send(conn, encryptedResponse)
 		}
 	}
 }
@@ -377,11 +377,11 @@ func acceptSessions(server *Server, clients map[string]Client) {
 }
 
 func (c *Client) send(conn net.Conn, data []byte) {
-	ciphertext := crypto.Encrypt(data, c.aes_key)
+	ciphertext := crypto.Encrypt(data, c.aesKey)
 	size := len(ciphertext)
-	size_bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(size_bytes, uint64(size))
-	_, err := conn.Write(size_bytes)
+	sizeBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(sizeBytes, uint64(size))
+	_, err := conn.Write(sizeBytes)
 	if err != nil {
 		fmt.Println("Error in query")
 		log.Fatal(err)
@@ -394,13 +394,13 @@ func (c *Client) send(conn net.Conn, data []byte) {
 }
 
 func receive(c net.Conn) []byte {
-	size_bytes := make([]byte, 8)
-	_, err := io.ReadFull(c, size_bytes)
+	sizeBytes := make([]byte, 8)
+	_, err := io.ReadFull(c, sizeBytes)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	size := binary.LittleEndian.Uint64(size_bytes)
+	size := binary.LittleEndian.Uint64(sizeBytes)
 	fmt.Printf("\nGot a size: %d", size)
 	data := make([]byte, size)
 	_, err = io.ReadFull(c, data)
