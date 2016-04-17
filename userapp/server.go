@@ -34,7 +34,7 @@ func (s *Server) get_key(id string) []byte {
 	s.query([]byte(id))
 	encrypted_response := network.Receive(s.conn)
 	response := crypto.Decrypt(encrypted_response, s.aes_key)
-	fmt.Printf("\nId we got is: ", response)
+	fmt.Printf("\nId we got is: %s", response)
 	return response
 }
 

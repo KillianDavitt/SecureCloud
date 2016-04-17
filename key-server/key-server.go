@@ -189,7 +189,7 @@ func main() {
 
 	acceptSessions(server, clients)
 
-	fmt.Println("\n")
+	fmt.Println(" ")
 	////////////////done := false
 	/*for done != true {
 		fmt.Print("SecureCloud>")
