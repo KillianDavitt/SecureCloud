@@ -4,6 +4,8 @@
 
 A file encryption application for https://www.github.com/KillianDavitt/ClassCloud
 
+Uses AES256 bit encryption to encrypt your files before uploading them to an instance of 'ClassCloud'
+
 # Introduction
 The application consists of two programs, both written in go; the user application and the key server.
 Both of these programs interact both with each other as well as with the cloud server itself.
