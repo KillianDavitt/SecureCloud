@@ -25,7 +25,7 @@ func Send(conn net.Conn, data []byte) {
 	}
 }
 
-// Recieve bytes from a give connection
+// Receive bytes from a give connection
 func Receive(c net.Conn) []byte {
 	sizeBytes := make([]byte, 8)
 	_, err := io.ReadFull(c, sizeBytes)
