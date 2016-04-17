@@ -53,8 +53,8 @@ func (s *server) putKey(conn net.Conn, c client) {
 }
 
 func (s *server) getKey(conn net.Conn, c client) []byte {
-	encryptedId := network.Receive(conn)
-	id := crypto.Decrypt(encryptedId, c.aesKey)
+	encryptedID := network.Receive(conn)
+	id := crypto.Decrypt(encryptedID, c.aesKey)
 	return s.keys[string(id)]
 }
 
