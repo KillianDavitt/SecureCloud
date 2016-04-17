@@ -200,13 +200,7 @@ func main() {
 
 }
 
-func session(s *Server, conn net.Conn, c map[string]Client) {
-	ip := conn.RemoteAddr().String()
-	fmt.Println("Received connection from: " + ip)
-
-	// Send our public key
-
-	// Receive their public key
+func recievePublicKey(conn net.Conn) (rsa.PublicKey, []byte) {
 	client_pub_bytes := make([]uint8, 162)
 	_, err := io.ReadFull(conn, client_pub_bytes)
 	if err != nil {
@@ -219,6 +213,17 @@ func session(s *Server, conn net.Conn, c map[string]Client) {
 	var client_pub rsa.PublicKey
 	client_pub = *client_pub_interface.(*rsa.PublicKey)
 	fmt.Println("Sucessfully received a public key from this user...")
+	return client_pub, client_pub_bytes
+}
+
+func session(s *Server, conn net.Conn, c map[string]Client) {
+	ip := conn.RemoteAddr().String()
+	fmt.Println("Received connection from: " + ip)
+
+	// Send our public key
+
+	// Receive their public key
+	client_pub, client_pub_bytes := recievePublicKey(conn)
 	// We have the pub, do we know this person?
 	map_index := client_pub.N.String()
 	client := c[map_index]
