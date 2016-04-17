@@ -20,7 +20,7 @@ import (
 	"os"
 )
 
-type Server struct {
+type server struct {
 	pub    rsa.PublicKey
 	priv   rsa.PrivateKey
 	client http.Client
@@ -28,9 +28,9 @@ type Server struct {
 	db     *sql.DB
 }
 
-func (c *Client) initis() bool { return c.init }
+func (c *client) initis() bool { return c.init }
 
-type Client struct {
+type client struct {
 	init     bool
 	username string
 	pub      rsa.PublicKey
@@ -38,7 +38,7 @@ type Client struct {
 	trusted  bool
 }
 
-func (s *Server) putKey(conn net.Conn, c Client) {
+func (s *server) putKey(conn net.Conn, c client) {
 	encryptedKey := network.Receive(conn)
 	key := crypto.Decrypt(encryptedKey, c.aesKey)
 	id := make([]byte, 10)
@@ -52,7 +52,7 @@ func (s *Server) putKey(conn net.Conn, c Client) {
 	fmt.Println(s.keys[string(id)])
 }
 
-func (s *Server) getKey(conn net.Conn, c Client) []byte {
+func (s *server) getKey(conn net.Conn, c client) []byte {
 	encryptedId := network.Receive(conn)
 	id := crypto.Decrypt(encryptedId, c.aesKey)
 	return s.keys[string(id)]
@@ -65,16 +65,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	clients := make(map[string]Client)
+	clients := make(map[string]client)
 
-	rows, err := db.Query("SELECT username,pubKey,trusted FROM users")
+	rows, err := db.Query("SELECT username,pub_key,trusted FROM users")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println("Loading Users......")
 	for rows.Next() {
-		var c Client
+		var c client
 		var username string
 		var pubKeyBytes []byte
 		var trusted bool
@@ -102,7 +102,7 @@ func main() {
 
 	}
 
-	var s Server
+	var s server
 	server := &s
 
 	// Make the map for aes keys, one for each file
@@ -216,7 +216,7 @@ func recievePublicKey(conn net.Conn) (rsa.PublicKey, []byte) {
 	return clientPub, clientPubBytes
 }
 
-func session(s *Server, conn net.Conn, c map[string]Client) {
+func session(s *server, conn net.Conn, c map[string]client) {
 	ip := conn.RemoteAddr().String()
 	fmt.Println("Received connection from: " + ip)
 
@@ -272,7 +272,7 @@ func session(s *Server, conn net.Conn, c map[string]Client) {
 	negotiateTrust(conn, s, clientPubBytes, client, name)
 }
 
-func negotiateTrust(conn net.Conn, s *Server, clientPubBytes []byte, client Client, name string) {
+func negotiateTrust(conn net.Conn, s *server, clientPubBytes []byte, client client, name string) {
 
 	trusted := false
 	if client.initis() {
@@ -315,7 +315,7 @@ func negotiateTrust(conn net.Conn, s *Server, clientPubBytes []byte, client Clie
 
 }
 
-func list(s *Server) string {
+func list(s *server) string {
 	v := url.Values{}
 	v.Set("token", "0SKvdYWC6xR0wk9VKBtJDzn47Hpocbd1")
 	//reader := io.Reader("hi")
@@ -331,7 +331,7 @@ func list(s *Server) string {
 
 }
 
-func handleCommands(conn net.Conn, client Client, s *Server) {
+func handleCommands(conn net.Conn, client client, s *server) {
 	// Listen for "ls" or "put" or anything like that
 	fmt.Println("Handling commands")
 	for {
@@ -361,7 +361,7 @@ func handleCommands(conn net.Conn, client Client, s *Server) {
 	}
 }
 
-func acceptSessions(server *Server, clients map[string]Client) {
+func acceptSessions(server *server, clients map[string]client) {
 	ln, err := net.Listen("tcp", ":2222")
 	if err != nil {
 		fmt.Print("oooo")
@@ -376,7 +376,7 @@ func acceptSessions(server *Server, clients map[string]Client) {
 	}
 }
 
-func (c *Client) send(conn net.Conn, data []byte) {
+func (c *client) send(conn net.Conn, data []byte) {
 	ciphertext := crypto.Encrypt(data, c.aesKey)
 	size := len(ciphertext)
 	sizeBytes := make([]byte, 8)
