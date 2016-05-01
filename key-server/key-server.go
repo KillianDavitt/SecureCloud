@@ -39,13 +39,12 @@ type client struct {
 }
 
 func (s *server) putKey(conn net.Conn, c client) {
+	fmt.Println("In the putkey func")
 	encryptedKey := network.Receive(conn)
+	fmt.Println("got the key, need to decrypt it")
 	key := crypto.Decrypt(encryptedKey, c.aesKey)
-	id := make([]byte, 10)
-	_, err := io.ReadFull(conn, id)
-	if err != nil {
-		log.Fatal(err)
-	}
+	fmt.Println("Got a decrypted aes key")
+	id := network.Receive(conn)
 	id = crypto.Decrypt(id, c.aesKey)
 	fmt.Println(string(id))
 	s.keys[string(id)] = key
@@ -102,11 +101,29 @@ func main() {
 
 	}
 
+	// Load in the aes keys
+	keys := make(map[string][]byte)
+	rows, err = db.Query("SELECT unique_id,aes_key FROM files")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Loading Users......")
+	for rows.Next() {
+		var uniqueID string
+		var aesKey []byte
+		err = rows.Scan(&uniqueID, &aesKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+		keys[uniqueID] = aesKey
+
+	}
+
 	var s server
 	server := &s
 
 	// Make the map for aes keys, one for each file
-	keys := make(map[string][]byte)
 	server.keys = keys
 	server.db = db
 
@@ -298,7 +315,7 @@ func negotiateTrust(conn net.Conn, s *server, clientPubBytes []byte, client clie
 		var stmt *sql.Stmt
 		var err error
 		if !client.trusted {
-			stmt, err = s.db.Prepare("INSERT INTO users(username, pubKey, trusted) values(?,?, ?);")
+			stmt, err = s.db.Prepare("INSERT INTO users(username, pub_key, trusted) values(?,?, ?);")
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -319,7 +336,7 @@ func list(s *server) string {
 	v := url.Values{}
 	v.Set("token", "0SKvdYWC6xR0wk9VKBtJDzn47Hpocbd1")
 	//reader := io.Reader("hi")
-	resp, err := http.PostForm("http://127.0.0.1:8000/listFiles", v)
+	resp, err := http.PostForm("http://127.0.0.1:8000/list_files", v)
 	if err != nil {
 		fmt.Print("There was an error connecting to the server, please ensure the cloud server is turned on")
 		log.Fatal(err)
@@ -391,22 +408,4 @@ func (c *client) send(conn net.Conn, data []byte) {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func receive(c net.Conn) []byte {
-	sizeBytes := make([]byte, 8)
-	_, err := io.ReadFull(c, sizeBytes)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	size := binary.LittleEndian.Uint64(sizeBytes)
-	fmt.Printf("\nGot a size: %d", size)
-	data := make([]byte, size)
-	_, err = io.ReadFull(c, data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Got data")
-	return data
 }
