@@ -251,12 +251,10 @@ func (s *server) get(filename string) {
 	res.Body.Read(body)
 
 	key := s.getKey(s.currentLs[filename])
-	fmt.Println("KEYKEY:")
-	fmt.Println(key)
-	fmt.Print(string(crypto.Decrypt(body, key)))
+	decrypted_file := crypto.Decrypt(body, key)
 
 	fmt.Println("Writing to file")
-	f.Write(body)
+	f.Write(decrypted_file)
 }
 
 func (s *server) ls() {
