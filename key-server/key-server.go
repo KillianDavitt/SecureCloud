@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"github.com/KillianDavitt/SecureCloud/crypto"
 	"github.com/KillianDavitt/SecureCloud/network"
+	"github.com/Sirupsen/logrus"
 	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -30,6 +30,8 @@ type server struct {
 
 func (c *client) initis() bool { return c.init }
 
+var log = logrus.New()
+
 type client struct {
 	init     bool
 	username string
@@ -39,11 +41,8 @@ type client struct {
 }
 
 func (s *server) putKey(conn net.Conn, c client) {
-	fmt.Println("In the putkey func")
 	encryptedKey := network.Receive(conn)
-	fmt.Println("got the key, need to decrypt it")
 	key := crypto.Decrypt(encryptedKey, c.aesKey)
-	fmt.Println("Got a decrypted aes key")
 	id := network.Receive(conn)
 	id = crypto.Decrypt(id, c.aesKey)
 	fmt.Println(string(id))
@@ -59,17 +58,47 @@ func (s *server) getKey(conn net.Conn, c client) []byte {
 
 func main() {
 
+	log.Level = logrus.DebugLevel
+
 	db, err := sql.Open("sqlite3", "./securecloud.db")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	log.Debug("Opened the db")
+
 	clients := make(map[string]client)
 
 	rows, err := db.Query("SELECT username,pub_key,trusted FROM users")
-	if err != nil {
+
+	if err != nil && err.Error() == "no such table: users" {
+		log.Debug("No table users")
+		fmt.Println("Creating db")
+		stmt, err := db.Prepare("CREATE TABLE users (username varchar(20), pub_key blob, trusted bool);")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_, err = stmt.Exec()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Debug("Created users table")
+		stmt, err = db.Prepare("CREATE TABLE files (unique_id int, aes_key blob);")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_, err = stmt.Exec()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Debug("Created files table")
+
+	} else if err != nil {
 		log.Fatal(err)
 	}
+	log.Debug("Finished db creation")
 
 	fmt.Println("Loading Users......")
 	for rows.Next() {
@@ -119,6 +148,7 @@ func main() {
 		keys[uniqueID] = aesKey
 
 	}
+	log.Debug("Finished db loading ops")
 
 	var s server
 	server := &s
@@ -334,7 +364,7 @@ func negotiateTrust(conn net.Conn, s *server, clientPubBytes []byte, client clie
 
 func list(s *server) string {
 	v := url.Values{}
-	v.Set("token", "0SKvdYWC6xR0wk9VKBtJDzn47Hpocbd1")
+	v.Set("token", "Q1Dx3XJu4n8JIJztE4IZwDQ7XAfXdK7d")
 	//reader := io.Reader("hi")
 	resp, err := http.PostForm("http://127.0.0.1:8000/list_files", v)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"github.com/KillianDavitt/SecureCloud/crypto"
 	"github.com/KillianDavitt/SecureCloud/network"
@@ -17,8 +18,12 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"strings"
 )
+
+type file struct {
+	name    string
+	file_id string
+}
 
 type server struct {
 	conn      net.Conn
@@ -82,7 +87,7 @@ func (s *server) put(filename string) {
 	if fw, err = w.CreateFormField("token"); err != nil {
 		log.Fatal(err)
 	}
-	if _, err = fw.Write([]byte("0SKvdYWC6xR0wk9VKBtJDzn47Hpocbd1")); err != nil {
+	if _, err = fw.Write([]byte("Q1Dx3XJu4n8JIJztE4IZwDQ7XAfXdK7d")); err != nil {
 		log.Fatal(err)
 	}
 
@@ -263,29 +268,16 @@ func (s *server) ls() {
 	response := crypto.Decrypt(encryptedResponse, s.aesKey)
 
 	responseString := string(response)
-	filesList := make(map[string]string)
-	files := strings.Split(responseString, "[")
-	for i := 2; i < len(files)-1; i++ {
-		files[i] = strings.Replace(files[i], "]", "", -1)
-		files[i] = strings.Replace(files[i], " ", "", -1)
-		files[i] = strings.Replace(files[i], "\"", "", -1)
-		files[i] = strings.Replace(files[i], "\n", "", -1)
 
-		temp := strings.Split(files[i], ",")
-		filesList[temp[1]] = temp[0]
-	}
+	files := make(map[string]string)
 
-	for k := range filesList {
-		if k == "" || k == "\n" {
-			delete(filesList, k)
-		}
-	}
 	fmt.Println(responseString)
-	for k := range filesList {
-		fmt.Println(k)
+	err := json.Unmarshal([]byte(responseString), &files)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	s.currentLs = filesList
+	s.currentLs = files
 }
 
 func (s *server) decryptMessage(data []byte) []byte {
